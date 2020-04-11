@@ -1,5 +1,5 @@
 import React from "react";
-import tubeData from "./data.js";
+import tubeData from "./tubedata.js";
 import "bootstrap/dist/css/bootstrap.min.css";
 import logo from "./logo.jpg";
 import Form from "react-bootstrap/Form";
@@ -74,19 +74,27 @@ class Game extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      word: randomTube(),
+      word: "",
       currentGuess: "",
       wrongGuesses: [],
       guessedWord: [],
       isComplete: false,
+      lines: getLines(),
+      allLinesDisabled: false,
     };
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
+    this.reset = this.reset.bind(this);
+    this.updateLines = this.updateLines.bind(this);
+    this.onSelectOrDeselectAllLines = this.onSelectOrDeselectAllLines.bind(
+      this
+    );
   }
 
   componentDidMount() {
+    let word = this.randomTube();
     let arrayOfBlanks = [];
-    this.state.word.Station.split("").forEach((x) => {
+    word.properties.name.split("").forEach((x) => {
       if (x === "-") {
         arrayOfBlanks.push("- ");
       } else if (x !== " ") {
@@ -96,8 +104,26 @@ class Game extends React.Component {
       }
     });
     this.setState({
+      word: word,
       guessedWord: arrayOfBlanks,
     });
+  }
+
+  randomTube() {
+    let availableStations = [];
+
+    for (let i = 0; i < data.length; i++) {
+      for (let j = 0; j < data[i].properties.lines.length; j++) {
+        if (
+          this.state.lines[data[i].properties.lines[j].name].enabled === true
+        ) {
+          availableStations.push(data[i]);
+          break;
+        }
+      }
+    }
+    const numberOfStations = availableStations.length;
+    return availableStations[Math.floor(Math.random() * numberOfStations)];
   }
 
   handleChange(event) {
@@ -107,7 +133,7 @@ class Game extends React.Component {
   }
 
   handleSubmit(event) {
-    let stationArray = this.state.word.Station.toLowerCase().split("");
+    let stationArray = this.state.word.properties.name.toLowerCase().split("");
     if (stationArray.includes(this.state.currentGuess.toLowerCase())) {
       this.correctGuess(this.state.currentGuess, stationArray);
     } else {
@@ -151,10 +177,78 @@ class Game extends React.Component {
   onGameCompleted() {
     let word = this.state.word;
     this.setState({
-      guessedWord: word.Station.split(""),
+      guessedWord:
+        word.properties.name + " (" + this.getLinesForStation(word) + ")",
       wrongGuesses: [],
       isComplete: true,
     });
+  }
+
+  getLinesForStation(station) {
+    let lines = "";
+    for (let i = 0; i < station.properties.lines.length; i++) {
+      lines = lines.concat(station.properties.lines[i].name);
+      if (i !== station.properties.lines.length - 1) {
+        lines = lines.concat(", ");
+      }
+    }
+    return lines;
+  }
+
+  reset(event) {
+    event.preventDefault();
+    this.setState({
+      word: this.randomTube(),
+      currentGuess: "",
+      wrongGuesses: [],
+      guessedWord: [],
+      isComplete: false,
+    });
+    this.componentDidMount();
+    return null;
+  }
+
+  updateLines(event) {
+    let updatedLine = this.state.lines[event.target.id];
+    updatedLine.enabled = event.target.checked;
+    let updatedLines = this.state.lines;
+    updatedLines[event.target.id] = updatedLine;
+    this.setState({
+      lines: updatedLines,
+      allLinesDisabled: this.areAllLinesDisabled(),
+    });
+  }
+
+  onSelectOrDeselectAllLines() {
+    let updatedLines = this.state.lines;
+    for (let i = 0; i < Object.keys(updatedLines).length; i++) {
+      if (updatedLines[Object.keys(updatedLines)[i]].enabled === false) {
+        this.setAllLines(true);
+        return;
+      }
+    }
+    this.setAllLines(false);
+  }
+
+  setAllLines(selectAll) {
+    let updatedLines = this.state.lines;
+    for (let i = 0; i < Object.keys(updatedLines).length; i++) {
+      updatedLines[Object.keys(updatedLines)[i]].enabled = selectAll;
+    }
+    this.setState({
+      lines: updatedLines,
+      allLinesDisabled: !selectAll,
+    });
+  }
+
+  areAllLinesDisabled() {
+    let updatedLines = this.state.lines;
+    for (let i = 0; i < Object.keys(updatedLines).length; i++) {
+      if (updatedLines[Object.keys(updatedLines)[i]].enabled === true) {
+        return false;
+      }
+    }
+    return true;
   }
 
   render() {
@@ -166,7 +260,22 @@ class Game extends React.Component {
               <img src={logo} class="rounded d-block" alt="logo" />
             </div>
             <div class="col align-self-end">
-              <font size="20">{this.state.guessedWord}</font>
+              <StartGameAlert allLinesDisabled={this.state.allLinesDisabled} />
+              <GuessedWord
+                allLinesDisabled={this.state.allLinesDisabled}
+                guessedWord={this.state.guessedWord}
+              />
+            </div>
+            <div class="col-md-auto align-self-end">
+              <Form onSubmit={this.reset}>
+                <Button
+                  variant="primary"
+                  type="Submit"
+                  disabled={this.state.allLinesDisabled}
+                >
+                  New word
+                </Button>
+              </Form>
             </div>
           </div>
           <div class="row">
@@ -177,22 +286,27 @@ class Game extends React.Component {
               />
             </div>
             <div class="col">
-              <center>
-                <Guesses
-                  handleSubmit={this.handleSubmit}
-                  handleChange={this.handleChange}
-                  currentGuess={this.state.currentGuess}
-                  wrongGuesses={this.state.wrongGuesses}
+              <Guesses
+                handleSubmit={this.handleSubmit}
+                handleChange={this.handleChange}
+                currentGuess={this.state.currentGuess}
+                wrongGuesses={this.state.wrongGuesses}
+                isComplete={this.state.isComplete}
+                word={this.state.word}
+                allLinesDisabled={this.state.allLinesDisabled}
+              />
+              <div class="py-3">
+                <SummaryInfo
                   isComplete={this.state.isComplete}
-                  word={this.state.word}
+                  station={this.state.word}
                 />
-                <div class="py-3">
-                  <SummaryInfo
-                    isComplete={this.state.isComplete}
-                    station={this.state.word}
-                  />
-                </div>
-              </center>
+                <LineSelection
+                  lines={this.state.lines}
+                  onSubmit={this.reset}
+                  onChange={this.updateLines}
+                  onSelectAll={this.onSelectOrDeselectAllLines}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -217,14 +331,17 @@ class Guesses extends React.Component {
                   onChange={this.props.handleChange}
                 ></Form.Control>
               </Form.Group>
-              <Button varient="primary" type="Submit">
+              <Button
+                varient="primary"
+                type="Submit"
+                disabled={this.props.allLinesDisabled}
+              >
                 Submit
               </Button>
             </Form>
+            <font size="4">Wrong guesses: {this.props.wrongGuesses}</font>
           </div>
-          <div>
-            <font size="5">Wrong guesses: {this.props.wrongGuesses}</font>
-          </div>
+          <div></div>
         </>
       );
     } else {
@@ -234,46 +351,6 @@ class Guesses extends React.Component {
 }
 
 class SummaryInfo extends React.Component {
-  // constructor(props) {
-  //   super(props);
-  //   this.state = {
-  //     lines: "",
-  //     zones: ""
-  //   };
-  // }
-
-  // componentDidMount() {
-  //   this.setState({
-  //     lines: this.getLines(),
-  //     zones: this.getZones()
-  //   });
-  // }
-
-  // getLines() {
-  //   var lines = "";
-  //   const servingLines = this.props.station.servingLines.slice();
-  //   for (let i = 0; i < servingLines.length; i++) {
-  //     if (typeof servingLines[0].servingLine !== "undefined") {
-  //       lines = lines + servingLines[i].servingLine;
-  //     } else {
-  //       lines = lines + servingLines[i];
-  //     }
-  //   }
-  //   return lines ? lines : "N/A";
-  // }
-
-  // getZones() {
-  //   var lines = "";
-  //   for (let i = 0; i < this.props.station.zones.length; i++) {
-  //     if (typeof this.props.station.zones[0].zone !== "undefined") {
-  //       lines = lines + this.props.station.zones[i].zone + ", ";
-  //     } else {
-  //       lines = lines + this.props.station.zones[0];
-  //     }
-  //   }
-  //   return lines ? lines : "N/A";
-  // }
-
   render() {
     if (this.props.isComplete) {
       return (
@@ -285,17 +362,13 @@ class SummaryInfo extends React.Component {
             title="result"
             src={
               "https://www.google.com/maps/embed/v1/search?q=" +
-              this.props.station.Postcode +
+              this.props.station.geometry.coordinates[1] +
+              "," +
+              this.props.station.geometry.coordinates[0] +
               "&key=AIzaSyA6cw7TKh0Da4IPxxfWzAXcNLOPGsftWMg"
             }
             allowfullscreen
           ></iframe>
-          <div>
-            <font size="5">
-              The station chosen for this round was:{" "}
-              {this.props.station.Station}
-            </font>
-          </div>
         </>
       );
     }
@@ -303,14 +376,98 @@ class SummaryInfo extends React.Component {
   }
 }
 
-function capitaliseString(string) {
-  string.map((x) => x.charAt(0).toUpperCase() + x.substring(1)).join("/");
+class LineSelection extends React.Component {
+  createLines(isMainLines) {
+    return Object.keys(getLines())
+      .filter((x) =>
+        isMainLines ? mainLines.includes(x) : !mainLines.includes(x)
+      )
+      .sort()
+      .map((x) => (
+        <Form.Check
+          inline
+          type="checkbox"
+          id={x}
+          label={x.toString()}
+          checked={this.props.lines[x].enabled}
+          onChange={this.props.onChange}
+        />
+      ));
+  }
+
+  render() {
+    return (
+      <div>
+        <Form>
+          <Form.Label>
+            <font size="5">Tube lines to include:</font>
+          </Form.Label>
+          <Form.Group>
+            {/* <Form.Label>Main lines: </Form.Label> */}
+            <Form.Row>{this.createLines(true)}</Form.Row>
+          </Form.Group>
+          <Form.Group>
+            {/* <Form.Label>Other lines: </Form.Label> */}
+            <Form.Row>{this.createLines(false)}</Form.Row>
+          </Form.Group>
+          <Button class="btn btn-sm" onClick={this.props.onSelectAll}>
+            Select all
+          </Button>
+        </Form>
+      </div>
+    );
+  }
 }
 
-function randomTube() {
-  const numberOfStations = data.length;
-  return data[Math.floor(Math.random() * numberOfStations)];
+function getLines() {
+  let lines = {};
+  data.forEach((x) => {
+    let xlines = x.properties.lines.slice();
+    for (let i = 0; i < xlines.length; i++) {
+      let name = xlines[i].name;
+      if (!lines[name]) {
+        lines[name] = { enabled: mainLines.includes(name) };
+      }
+    }
+  });
+  return lines;
 }
+
+class StartGameAlert extends React.Component {
+  render() {
+    if (this.props.allLinesDisabled) {
+      return (
+        <Alert variant="warning">
+          Select at least 1 tube line to start the game
+        </Alert>
+      );
+    }
+    return null;
+  }
+}
+
+class GuessedWord extends React.Component {
+  render() {
+    if (!this.props.allLinesDisabled) {
+      return <font size="7">{this.props.guessedWord}</font>;
+    }
+    return null;
+  }
+}
+
+const mainLines = [
+  "Bakerloo",
+  "Central",
+  "Circle",
+  "District",
+  "Hammersmith & City",
+  "Jubilee",
+  "Metropolitan",
+  "Northern",
+  "Piccadilly",
+  "Victoria",
+  "Waterloo & City",
+];
 
 const data = tubeData.slice();
 export default App;
