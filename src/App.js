@@ -5,6 +5,7 @@ import logo from "./logo.jpg";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
+import ReactFitText from "react-fittext";
 import "./App.css";
 
 function App() {
@@ -59,6 +60,10 @@ class Canvas extends React.Component {
   }
 
   render() {
+    if (this.refs.canvas) {
+      const ctx = this.refs.canvas.getContext("2d");
+      ctx.clearRect(10, 10, ctx.canvas.width - 20, ctx.canvas.height - 20);
+    }
     for (let i = 0; i < this.props.wrongGuesses.length; i++) {
       this.state.drawFunctions[i].call();
     }
@@ -81,6 +86,7 @@ class Game extends React.Component {
       isComplete: false,
       lines: getLines(),
       allLinesDisabled: false,
+      gameStarted: true,
     };
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
@@ -92,21 +98,27 @@ class Game extends React.Component {
   }
 
   componentDidMount() {
-    let word = this.randomTube();
+    if (this.state.gameStarted) {
+      let word = this.randomTube();
+      this.setState({
+        word: word,
+        guessedWord: this.getArrayOfBlanks(word.properties.name),
+      });
+    }
+  }
+
+  getArrayOfBlanks(word) {
     let arrayOfBlanks = [];
-    word.properties.name.split("").forEach((x) => {
-      if (x === "-") {
-        arrayOfBlanks.push("- ");
+    word.split("").forEach((x) => {
+      if (x === "-" || x === "&") {
+        arrayOfBlanks.push(x + " ");
       } else if (x !== " ") {
         arrayOfBlanks.push("__ ");
       } else {
         arrayOfBlanks.push(" / ");
       }
     });
-    this.setState({
-      word: word,
-      guessedWord: arrayOfBlanks,
-    });
+    return arrayOfBlanks;
   }
 
   randomTube() {
@@ -197,15 +209,22 @@ class Game extends React.Component {
 
   reset(event) {
     event.preventDefault();
-    this.setState({
-      word: this.randomTube(),
-      currentGuess: "",
-      wrongGuesses: [],
-      guessedWord: [],
-      isComplete: false,
-    });
-    this.componentDidMount();
-    return null;
+    if (this.state.allLinesDisabled) {
+      this.setState({
+        gameStarted: false,
+      });
+    } else {
+      let word = this.randomTube();
+      let blankArray = this.getArrayOfBlanks(word.properties.name);
+      this.setState({
+        word: word,
+        currentGuess: "",
+        wrongGuesses: [],
+        guessedWord: blankArray,
+        isComplete: false,
+        gameStarted: true,
+      });
+    }
   }
 
   updateLines(event) {
@@ -260,19 +279,19 @@ class Game extends React.Component {
               <img src={logo} class="rounded d-block" alt="logo" />
             </div>
             <div class="col align-self-end">
-              <StartGameAlert allLinesDisabled={this.state.allLinesDisabled} />
+              <StartGameAlert
+                allLinesDisabled={this.state.allLinesDisabled}
+                gameStarted={this.state.gameStarted}
+              />
               <GuessedWord
                 allLinesDisabled={this.state.allLinesDisabled}
                 guessedWord={this.state.guessedWord}
+                gameStarted={this.state.gameStarted}
               />
             </div>
             <div class="col-md-auto align-self-end">
               <Form onSubmit={this.reset}>
-                <Button
-                  variant="primary"
-                  type="Submit"
-                  disabled={this.state.allLinesDisabled}
-                >
+                <Button variant="primary" type="Submit">
                   New word
                 </Button>
               </Form>
@@ -294,6 +313,7 @@ class Game extends React.Component {
                 isComplete={this.state.isComplete}
                 word={this.state.word}
                 allLinesDisabled={this.state.allLinesDisabled}
+                gameStarted={this.state.gameStarted}
               />
               <div class="py-3">
                 <SummaryInfo
@@ -326,15 +346,17 @@ class Guesses extends React.Component {
                 <Form.Control
                   type="text"
                   maxLength="1"
+                  minLength="1"
                   placeholder="Next guess"
                   value={this.props.currentGuess}
                   onChange={this.props.handleChange}
+                  disabled={!this.props.gameStarted}
                 ></Form.Control>
               </Form.Group>
               <Button
-                varient="primary"
+                variant="primary"
                 type="Submit"
-                disabled={this.props.allLinesDisabled}
+                disabled={!this.props.gameStarted}
               >
                 Submit
               </Button>
@@ -411,7 +433,7 @@ class LineSelection extends React.Component {
             <Form.Row>{this.createLines(false)}</Form.Row>
           </Form.Group>
           <Button class="btn btn-sm" onClick={this.props.onSelectAll}>
-            Select all
+            Select / deselect all
           </Button>
         </Form>
       </div>
@@ -435,10 +457,10 @@ function getLines() {
 
 class StartGameAlert extends React.Component {
   render() {
-    if (this.props.allLinesDisabled) {
+    if (!this.props.gameStarted) {
       return (
         <Alert variant="warning">
-          Select at least 1 tube line to start the game
+          Select at least 1 tube line and click 'New word' to start the game
         </Alert>
       );
     }
@@ -448,8 +470,16 @@ class StartGameAlert extends React.Component {
 
 class GuessedWord extends React.Component {
   render() {
-    if (!this.props.allLinesDisabled) {
-      return <font size="7">{this.props.guessedWord}</font>;
+    if (this.props.gameStarted) {
+      return (
+        <>
+          <div style={{ display: "inline" }}>
+            <ReactFitText compressor={2}>
+              <h1>{this.props.guessedWord}</h1>
+            </ReactFitText>
+          </div>
+        </>
+      );
     }
     return null;
   }
