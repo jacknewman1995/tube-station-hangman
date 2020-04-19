@@ -1,6 +1,6 @@
 self.__precacheManifest = (self.__precacheManifest || []).concat([
   {
-    "revision": "624f7fd7a93fcaf681293617b74b7093",
+    "revision": "99af52f8308b1f5e9cf2e19c17c273a5",
     "url": "/tube-station-hangman/index.html"
   },
   {
@@ -8,7 +8,7 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/tube-station-hangman/static/css/2.de424728.chunk.css"
   },
   {
-    "revision": "d17e3e3e91416df202ff",
+    "revision": "42f961e3a183ac69cf8f",
     "url": "/tube-station-hangman/static/css/main.5f361e03.chunk.css"
   },
   {
@@ -20,8 +20,8 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/tube-station-hangman/static/js/2.6e08490b.chunk.js.LICENSE.txt"
   },
   {
-    "revision": "d17e3e3e91416df202ff",
-    "url": "/tube-station-hangman/static/js/main.e5e1de7d.chunk.js"
+    "revision": "42f961e3a183ac69cf8f",
+    "url": "/tube-station-hangman/static/js/main.51557992.chunk.js"
   },
   {
     "revision": "f623f37f33c3a5314ab1",
